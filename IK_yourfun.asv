@@ -1,22 +1,21 @@
 % function result = IK_yourfun()
 
-% global RDK;
-% global robot;
-% global robot_base;
 RDK = Robolink();
 robot = RDK.Item('yourfun_robot');
-
+global limits
 limits = deg2rad([-170,170;-110,110;-130,130;-135,135;-135,135;-135,135]);
 
 % alpha a d theta_offset
 dh_param = [0,    0,     45,     0
-           pi/2,  0,   51.5,  pi/2
-           0,   120,      0,     0
-           0,   120,      0, -pi/2
-           -pi/2, 0,   66.7,  pi/2
-           pi/2,  0,   51.7,     0];
+    pi/2,  0,   51.5,  pi/2
+    0,   120,      0,     0
+    0,   120,      0, -pi/2
+    -pi/2, 0,   66.7,  pi/2
+    pi/2,  0,   51.7,     0];
 
 T = robot.Pose();
+
+ik = zeros(4,7);
 
 % find theta1
 P0_5 = T*[0,0,-dh_param(6,3),1]';
@@ -24,7 +23,7 @@ P0_5_xy = P0_5(1:2);
 l1 = norm(P0_5_xy);
 l2 = dh_param(2,3);
 phi1 = atan2(P0_5_xy(2),P0_5_xy(1));
-phi2 = asin(l2/l1);
+phi2 = norm(asin(l2/l1));
 
 theta1_1 = phi1 + phi2;
 if(phi1>0)
@@ -33,122 +32,189 @@ else
     theta1_2 = pi - (phi2-phi1);
 end
 
+if(theta1_1>limits(1,2))
+    theta1_1 = theta1_1 - pi*2;
+elseif(theta1_1<limits(1,1))
+    theta1_1 = theta1_1 - pi*2;
+end
 
+if(theta1_2>limits(1,2))
+    theta1_2 = theta1_2 - pi*2;
+elseif(theta1_2<limits(1,1))
+    theta1_2 = theta1_2 - pi*2;
+end
 
-% compute theta 5, only for leaning forward
+if(theta1_2>limits(1,2)||theta1_2<limits(1,1))
+    theta1_2 = theta1_1;
+end
+
+ik(1,1) = theta1_1;
+ik(2,1) = theta1_1;
+ik(3,1) = theta1_2;
+ik(4,1) = theta1_2;
+
+% theta5 leaning forward params
 T1_1 = T_mdh(dh_param(1,:),theta1_1);
-P1_6_1 = inv(T1_1)*T(:,4);
-P1_5_1 = inv(T1_1)*P0_5;
-
-if(P1_6_1(1)<P1_5_1(1))
-    theta5_1 = -asin((-dh_param(2,3)-P1_6_1(2))/dh_param(6,3));
-else
-    theta5_1 = -(pi - asin((-dh_param(2,3)-P1_6_1(2))/dh_param(6,3)));
-end
-if(theta5_1<limits(5,1))
-    theta5_1 = theta5_1 + 2*pi;
-elseif(theta5_1>limits(5,2))
-    theta5_1 = theta5_1 - 2*pi;
-end
-
+P1_6_1 = T1_1\T(:,4);
+P1_5_1 = T1_1\P0_5;
 % theta 5 leaning backward
 T1_2 = T_mdh(dh_param(1,:),theta1_2);
-P1_6_2 = inv(T1_2)*T(:,4);
-P1_5_2 = inv(T1_2)*P0_5;
+P1_6_2 = T1_2\T(:,4);
+P1_5_2 = T1_2\P0_5;
 
-if(P1_6_2(1)<P1_5_2(1))
-    theta5_2 = -asin((-dh_param(2,3)-P1_6_2(2))/dh_param(6,3));
-else
-    theta5_2 = -(pi - asin((-dh_param(2,3)-P1_6_2(2))/dh_param(6,3)));
-end
-if(theta5_2<limits(5,1))
-    theta5_2 = theta5_2 + 2*pi;
-elseif(theta5_2>limits(5,2))
-    theta5_2 = theta5_2 - 2*pi;
-end
+% theta5_1 = get_theta5(P1_6_1,P1_5_1,dh_param(2,3),dh_param(6,3));
+% theta5_2 = get_theta5(P1_6_2,P1_5_2,dh_param(2,3),dh_param(6,3));
 
 % get theta 6 1
+T1_6_1 = T1_1\T;
+T1_6_2 = T1_2\T;
+theta6_1 = atan2(-T1_6_1(2,2),T1_6_1(2,1));
+theta6_2 = atan2(-T1_6_2(2,2),T1_6_2(2,1));
 
-S234 = T(3,3)/cos(theta5_1);
-C234 = (T(1,3)+sin(theta1_1)*sin(theta5_1))/(cos(theta1_1)*cos(theta5_1));
+if(theta6_1>limits(6,2))
+    theta6_1  = theta6_1 - pi;
+elseif(theta6_1<limits(6,1))
+    theta6_1  = theta6_1 + pi;
+end
 
-C6 = (T(3,2)-(S234*sin(theta5_1))*T(3,1)/C234)/(C234+sin(theta5_1)^2*S234^2/C234);
-S6 = (T(3,1)+S234*sin(theta5_1)*C6)/C234;
-theta6_1 = atan2(S6,C6);
+if(theta6_2>limits(6,2))
+    theta6_2  = theta6_2 - pi;
+elseif(theta6_2<limits(6,1))
+    theta6_2  = theta6_2 + pi;
+end
+rad2deg(theta6_1)
+rad2deg(theta6_2)
 
-% get theta6 2
-S234 = T(3,3)/cos(theta5_2);
-C234 = (T(1,3)+sin(theta1_2)*sin(theta5_2))/(cos(theta1_2)*cos(theta5_2));
+ik(1,6) = theta6_1;
+ik(2,6) = theta6_1;
+ik(3,6) = theta6_2;
+ik(4,6) = theta6_2;
 
-C6 = (T(3,2)-(S234*sin(theta5_2))*T(3,1)/C234)/(C234+sin(theta5_2)^2*S234^2/C234);
-S6 = (T(3,1)+S234*sin(theta5_2)*C6)/C234;
-theta6_2 = atan2(S6,C6);
+% theta6_1 = get_theta6(T,theta1_1,theta5_1);
+% theta6_2 = get_theta6(T,theta1_2,theta5_2);
+
+T1_5_1 = T1_6_1*inv(T_mdh(dh_param(6,:),theta6_1));
+T1_5_2 = T1_6_2*inv(T_mdh(dh_param(6,:),theta6_2));
+
+theta5_1 = atan2(-T1_5_1(2,2),T1_5_1(2,1));
+theta5_2 = atan2(-T1_5_2(2,2),T1_5_2(2,1));
+
+ik(1,5) = theta5_1;
+ik(2,5) = theta5_1;
+ik(3,5) = theta5_2;
+ik(4,5) = theta5_2;
 
 % get theta 2 3 4
-T6_1 = T_mdh(dh_param(6,:),theta6_1);
-T5_1 = T_mdh(dh_param(5,:),theta5_1);
-T1_1 = T_mdh(dh_param(1,:),theta1_1);
+[theta_234_1,succ1] = get_theta234(dh_param,theta6_1,theta5_1,theta1_1,T);
+[theta_234_2,succ2] = get_theta234(dh_param,theta6_2,theta5_2,theta1_2,T);
 
-T2T3T4 = inv(T1_1)*T*inv(T6_1)*inv(T5_1);
+ik(1:2,2:4) = theta_234_1;
+ik(3:4,2:4) = theta_234_2;
+if(succ1==1)
+    ik(1:2,7) = [1;1];
+    for i=1:2
+       for j=1:6
+          if(ik(i,j)>limits(j,2)||) 
+              ik(i,7)
+          elseif(ik(i,j)<limits(j,2)) 
+              
+          end
+       end
+    end
+    
+end
+if(succ2==1)
+    ik(3:4,7) = [1;1];
+end
 
-l1 = 120;
-l2 = 120;
+
+IK = [rad2deg(ik(:,1:6)),ik(:,7)]
+groud_truth = robot.SolveIK_All(T)'
+
+
+% end
+
+% function theta5 = get_theta5(P1_6,P1_5,d2,d6)
+%     global limits
+%     if(P1_6(2)<P1_5(2))
+%         if(P1_6(1)<P1_5(1))
+%             theta5 = - acos((-P1_6(2)-d2)/(d6)) - pi/2;
+%         else
+%             theta5 = acos((-d2-P1_6(2))/(d6)) - pi/2;
+%         end
+%     else
+%         if(P1_6(1)<P1_5(1))
+%             theta5 = acos((-d2-P1_6(2))/(-d6)) + pi/2;
+%         else
+%             theta5 = pi/2 - acos((-P1_6(2)-d2)/(-d6));
+%         end
+%     end
+%     if(theta5<limits(5,1))
+%         theta5 = theta5 + 2*pi;
+%     elseif(theta5>limits(5,2))
+%         theta5 = theta5 - 2*pi;
+%     end
+% end
+%
+% function theta6 = get_theta6(T,theta1,theta5)
+%     % T theta1 theta5
+%     global limits
+%     S234 = T(3,3)/cos(theta5);
+%     C234 = (T(1,3)+sin(theta1)*sin(theta5))/(cos(theta1)*cos(theta5));
+%
+%     C6 = (T(3,2)-(S234*sin(theta5))*T(3,1)/C234)/(C234+sin(theta5)^2*S234^2/C234);
+%     S6 = (T(3,1)+S234*sin(theta5)*C6)/C234;
+%     if(abs(S6)<eps)
+%         theta6 = 0;
+%     else
+%         theta6 = atan2(S6,C6);
+%     end
+%     if(theta6<limits(6,1))
+%         theta6 = theta6 + 2*pi;
+%     elseif(theta6>limits(6,2))
+%         theta6 = theta6 - 2*pi;
+%     end
+% end
+%
+function [theta234,succ] = get_theta234(dh_param,theta6,theta5,theta1,T)
+% dh_param(6,:) theta6 theta5 theta1
+T6 = T_mdh(dh_param(6,:),theta6);
+T5 = T_mdh(dh_param(5,:),theta5);
+T1 = T_mdh(dh_param(1,:),theta1);
+
+T2T3T4 = T1\T/T6/T5;
+
+l1 = dh_param(3,2);
+l2 = dh_param(4,2);
 l3 = sqrt(T2T3T4(1,4)^2+T2T3T4(3,4)^2);
-
-theta_hat = acos((l1^2+l2^2-l3^2)/(2*l1*l2));
-theta_hat2 = acos((l3^2+l1^2-l1^2)/(2*l1*l3));
-theta_hat3 = atan2(T2T3T4(3,4),T2T3T4(1,4));
-
-theta3_1 = -(pi-theta_hat);
-theta2_1 = theta_hat2 + theta_hat3 - pi/2;
+if(l1+l2<l3)
+    theta234 = zeros(2,3);
+    succ = 0;
+    return
+end
+if(l3 == sqrt(l1^2+l2^2))
+    theta3_1 = 0;
+    theta2_1 = 0;
+else
+    theta_hat = acos((l1^2+l2^2-l3^2)/(2*l1*l2));
+    theta_hat2 = acos((l3^2+l1^2-l1^2)/(2*l1*l3));
+    theta_hat3 = atan2(T2T3T4(3,4),T2T3T4(1,4));
+    theta3_1 = -(pi-theta_hat);
+    theta2_1 = theta_hat2 + theta_hat3 - pi/2;
+end
 T2_1 = T_mdh(dh_param(2,:),theta2_1);
 T3_1 = T_mdh(dh_param(3,:),theta3_1);
-T4_1 = inv(T3_1)*inv(T2_1)*inv(T1_1)*T*inv(T6_1)*inv(T5_1);
+T4_1 = inv(T3_1)*inv(T2_1)*inv(T1)*T*inv(T6)*inv(T5);
 theta4_1 = atan2(T4_1(2,1),T4_1(1,1))+pi/2;
 
 theta3_2 = -theta3_1;
 theta2_2 = theta2_1 - 2*theta_hat2;
 T2_2 = T_mdh(dh_param(2,:),theta2_2);
 T3_2 = T_mdh(dh_param(3,:),theta3_2);
-T4_2 = inv(T3_2)*inv(T2_2)*inv(T1_1)*T*inv(T6_1)*inv(T5_1);
+T4_2 = inv(T3_2)*inv(T2_2)*inv(T1)*T*inv(T6)*inv(T5);
 theta4_2 = atan2(T4_2(2,1),T4_2(1,1))+pi/2;
 
 
-result = rad2deg([theta1_1,theta2_1,theta3_1,theta4_1,theta5_1,theta6_1;
-          theta1_1,theta2_2,theta3_2,theta4_2,theta5_1,theta6_1]);
-
-
-
-T6_2 = T_mdh(dh_param(6,:),theta6_2);
-T5_2 = T_mdh(dh_param(5,:),theta5_2);
-T1_2 = T_mdh(dh_param(1,:),theta1_2);
-
-T2T3T4 = inv(T1_2)*T*inv(T6_2)*inv(T5_2);
-
-l1 = 120;
-l2 = 120;
-l3 = sqrt(T2T3T4(1,4)^2+T2T3T4(3,4)^2);
-
-theta_hat = acos((l1^2+l2^2-l3^2)/(2*l1*l2));
-theta_hat2 = acos((l3^2+l1^2-l1^2)/(2*l1*l3));
-theta_hat3 = atan2(T2T3T4(3,4),T2T3T4(1,4));
-
-theta3_1 = (pi-theta_hat);                  % elbow up
-theta2_1 = theta_hat3 - pi/2 - theta_hat2;  
-T2_1 = T_mdh(dh_param(2,:),theta2_1);
-T3_1 = T_mdh(dh_param(3,:),theta3_1);
-T4_1 = inv(T3_1)*inv(T2_1)*inv(T1_2)*T*inv(T6_2)*inv(T5_2);
-theta4_1 = atan2(T4_1(2,1),T4_1(1,1))+pi/2;
-
-theta3_2 = -theta3_1;
-theta2_2 = theta2_1 + 2*theta_hat2;
-T2_2 = T_mdh(dh_param(2,:),theta2_2);
-T3_2 = T_mdh(dh_param(3,:),theta3_2);
-T4_2 = inv(T3_2)*inv(T2_2)*inv(T1_1)*T*inv(T6_2)*inv(T5_2);
-theta4_2 = atan2(T4_2(2,1),T4_2(1,1))+pi/2;
-
-result = [result; rad2deg([theta1_2,theta2_1,theta3_1,theta4_1,theta5_2,theta6_2;theta1_2,theta2_2,theta3_2,theta4_2,theta5_2,theta6_2])];
-% 133.570000, -51.520000, -39.680000, -42.940000, -32.440000, 0.000000
-% -68.689401, 45.971459, 56.049184, 17.341853, 134.021579, -23.027947
-%-68.689401, 102.020643, -56.049184, 73.391037, 134.021579, -23.027947
-% end
+theta234 = [theta2_1 theta3_1 theta4_1;theta2_2 theta3_2 theta4_2];
+succ = 1;
+end

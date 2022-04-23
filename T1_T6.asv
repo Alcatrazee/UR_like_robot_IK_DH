@@ -37,23 +37,9 @@ T2T3T4T5T6 =    [ - sin(t2 + t3 + t4)*sin(t6) - cos(t2 + t3 + t4)*cos(t6)*sin(t5
                    cos(t2 + t3 + t4)*sin(t6) - sin(t2 + t3 + t4)*cos(t6)*sin(t5), cos(t2 + t3 + t4)*cos(t6) + sin(t2 + t3 + t4)*sin(t5)*sin(t6), sin(t2 + t3 + t4)*cos(t5), (667*cos(t2 + t3 + t4))/10 + 120*cos(t2 + t3) + 120*cos(t2) + (517*sin(t2 + t3 + t4)*cos(t5))/10
                                                                                0,                                                             0,                         0,                                                                                                1]   ;      
                                                                            
-T6 = [ cos(t6),-sin(t6),  0,    0
- 0, 0, -1,-517/10
-   sin(t6),    cos(t6),0, 0
-  0,   0,   0, 1];
+T6 = [cos(t6),-sin(t6),0,0]
+[ 0,-1,-517/10]
+[sin(t6),cos(t6), 0]
+[                                                           0,                                                           0,                                                 0,                                                     1]
                                                              
-T2T3T4T5 =  [ -cos(t2 + t3 + t4)*sin(t5), -cos(t2 + t3 + t4)*cos(t5), -sin(t2 + t3 + t4), - (667*sin(t2 + t3 + t4))/10 - 120*sin(t2 + t3) - 120*sin(t2)
-                                cos(t5),                   -sin(t5),                  0,                                                        -103/2
-             -sin(t2 + t3 + t4)*sin(t5), -sin(t2 + t3 + t4)*cos(t5),  cos(t2 + t3 + t4),   (667*cos(t2 + t3 + t4))/10 + 120*cos(t2 + t3) + 120*cos(t2)
-                                      0,                          0,                  0,                                                             1];
-T5 = [-sin(t5) -cos(t5) 0 0
-      0        0        1  66.7
-    -cos(t5)     sin(t5)   0 0
-    0 0 0 1];
-
-inv_T5 = [-sin(t5) 0 -cos(t5) 0
-          -cos(t5) 0  sin(t5) 0
-           0       1    0     -66.7
-           0       0    0       1];
-       
-T2T3T4 = T2T3T4T5*inv_T5
+                                                                           
