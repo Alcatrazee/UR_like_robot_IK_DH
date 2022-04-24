@@ -155,49 +155,6 @@ function result = in_range(number,range)
     end
 end
 
-
-% function theta5 = get_theta5(P1_6,P1_5,d2,d6)
-%     global limits
-%     if(P1_6(2)<P1_5(2))
-%         if(P1_6(1)<P1_5(1))
-%             theta5 = - acos((-P1_6(2)-d2)/(d6)) - pi/2;
-%         else
-%             theta5 = acos((-d2-P1_6(2))/(d6)) - pi/2;
-%         end
-%     else
-%         if(P1_6(1)<P1_5(1))
-%             theta5 = acos((-d2-P1_6(2))/(-d6)) + pi/2;
-%         else
-%             theta5 = pi/2 - acos((-P1_6(2)-d2)/(-d6));
-%         end
-%     end
-%     if(theta5<limits(5,1))
-%         theta5 = theta5 + 2*pi;
-%     elseif(theta5>limits(5,2))
-%         theta5 = theta5 - 2*pi;
-%     end
-% end
-%
-% function theta6 = get_theta6(T,theta1,theta5)
-%     % T theta1 theta5
-%     global limits
-%     S234 = T(3,3)/cos(theta5);
-%     C234 = (T(1,3)+sin(theta1)*sin(theta5))/(cos(theta1)*cos(theta5));
-%
-%     C6 = (T(3,2)-(S234*sin(theta5))*T(3,1)/C234)/(C234+sin(theta5)^2*S234^2/C234);
-%     S6 = (T(3,1)+S234*sin(theta5)*C6)/C234;
-%     if(abs(S6)<eps)
-%         theta6 = 0;
-%     else
-%         theta6 = atan2(S6,C6);
-%     end
-%     if(theta6<limits(6,1))
-%         theta6 = theta6 + 2*pi;
-%     elseif(theta6>limits(6,2))
-%         theta6 = theta6 - 2*pi;
-%     end
-% end
-%
 function [theta234,succ] = get_theta234(dh_param,theta6,theta5,theta1,T)
 global limits
 % dh_param(6,:) theta6 theta5 theta1
@@ -232,23 +189,9 @@ T3_1 = T_mdh(dh_param(3,:),theta3_1);
 T4_1 = inv(T3_1)*inv(T2_1)*inv(T1)*T*inv(T6)*inv(T5);
 theta4_1 = atan2(T4_1(2,1),T4_1(1,1))+pi/2;
 
-if(theta4_1>limits(4,2))
-    theta4_1 = theta4_1 - 2*pi;
-elseif(theta4_1<limits(4,1))
-    theta4_1 = theta4_1 + 2*pi;
-end
-
-if(theta3_1>limits(3,2))
-    theta3_1 = theta3_1 - 2*pi;
-elseif(theta3_1<limits(3,1))
-    theta3_1 = theta3_1 + 2*pi;
-end
-
-if(theta2_1>limits(2,2))
-    theta2_1 = theta2_1 - 2*pi;
-elseif(theta2_1<limits(2,1))
-    theta2_1 = theta2_1 + 2*pi;
-end
+theta4_1 = limit_angle(theta4_1,limits(4,:));
+theta3_1 = limit_angle(theta3_1,limits(3,:));
+theta2_1 = limit_angle(theta2_1,limits(2,:));
 
 if(in_range(theta2_1,limits(2,:))==0||in_range(theta3_1,limits(3,:))==0||in_range(theta4_1,limits(4,:))==0)
     succ(1) = 0;
@@ -263,23 +206,9 @@ T3_2 = T_mdh(dh_param(3,:),theta3_2);
 T4_2 = inv(T3_2)*inv(T2_2)*inv(T1)*T*inv(T6)*inv(T5);
 theta4_2 = atan2(T4_2(2,1),T4_2(1,1))+pi/2;
 
-if(theta4_2>limits(4,2))
-    theta4_2 = theta4_2 - 2*pi;
-elseif(theta4_2<limits(4,1))
-    theta4_2 = theta4_2 + 2*pi;
-end
-
-if(theta3_2>limits(3,2))
-    theta3_2 = theta3_2 - 2*pi;
-elseif(theta3_2<limits(3,1))
-    theta3_2 = theta3_2 + 2*pi;
-end
-
-if(theta2_2>limits(2,2))
-    theta2_2 = theta2_2 - 2*pi;
-elseif(theta2_2<limits(2,1))
-    theta2_2 = theta2_2 + 2*pi;
-end
+theta4_2 = limit_angle(theta4_2,limits(4,:));
+theta3_2 = limit_angle(theta3_2,limits(3,:));
+theta2_2 = limit_angle(theta2_2,limits(2,:));
 
 if(in_range(theta2_2,limits(2,:))==0||in_range(theta3_2,limits(3,:))==0||in_range(theta4_2,limits(4,:))==0)
     succ(2) = 0;
